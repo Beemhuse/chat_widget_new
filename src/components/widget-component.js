@@ -14,7 +14,7 @@ import {
 } from "../services/chat-service.js";
 import { initWebSocket } from "../services/websocket-init.js";
 
-export function WidgetComponent({ businessName, avatarUrl, businessData }) {
+export function WidgetComponent({ businessName, avatarUrl, logo, businessData }) {
   let messages = [
     { sender: "bot", content: "Hello! How can I help you today?" },
   ];
@@ -22,7 +22,7 @@ export function WidgetComponent({ businessName, avatarUrl, businessData }) {
   let socketService = null;
   let isLoading = false;
   let sessionId = null;
-
+console.log(businessData)
   const container = createElement("div", {
     className:
       "widget-component fixed bottom-20 right-5 w-80 h-[480px] flex flex-col bg-white rounded-xl shadow-lg overflow-hidden",
@@ -37,6 +37,7 @@ export function WidgetComponent({ businessName, avatarUrl, businessData }) {
   // ✅ Header must return a DOM node
   const header = ChatHeader({
     businessName,
+    businessData,
     avatarUrl,
     onBack: () => {
       view = "chat";

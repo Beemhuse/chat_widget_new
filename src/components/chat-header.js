@@ -2,18 +2,22 @@ import { createElement } from "../lib/dom.js";
 
 export function ChatHeader({
   businessName,
+  businessData,
   avatarUrl,
   onBack,
   onVideo,
   onAudio,
   showBack = false,
-  online_message = "We reply immediately",
 }) {
+  // Extract theme colours with fallback
+  const backgroundColour = businessData?.background_colour || "#4789F2";
+  const brandColour = businessData?.brand_colour || "#ffffff";
+  const online_message = businessData?.online_status || "We reply immediately";
   return createElement(
     "div",
     {
-      className:
-        "chat-header flex items-center justify-between p-3 bg-[#4789F2] text-white",
+      className: "chat-header flex items-center justify-between p-3",
+      style: `background-color: ${backgroundColour}; color: white;`,
     },
     [
       // Left Section (Back + Avatar + Name/Status)
@@ -38,13 +42,15 @@ export function ChatHeader({
         createElement("div", { className: "flex flex-col leading-tight" }, [
           createElement(
             "h2",
-            { className: "font-semibold text-sm pl-5" },
+            {
+              className: "font-semibold text-sm pl-5",
+              style: `color: ${brandColour};`, // highlight brand name
+            },
             businessName || "Support"
           ),
           createElement("div", { className: "flex items-center gap-2" }, [
             createElement("img", {
-              src:
-                "https://res.cloudinary.com/dzvyfd7is/image/upload/v1757512372/nrk_radio-active_xlqgav.svg",
+              src: "https://res.cloudinary.com/dzvyfd7is/image/upload/v1757512372/nrk_radio-active_xlqgav.svg",
               className: "w-4 h-4",
             }),
             createElement(
