@@ -11,7 +11,7 @@ export function WidgetButton({ isOpen, onClick, position = "top" }) {
 
   return createElement("img", {
     src: "https://res.cloudinary.com/dzvyfd7is/image/upload/v1757505272/Trigger_daiul2.svg",
-    className: `fixed w-24 h-24 flex items-center justify-center z-[10000]
+    className: `fixed cursor-pointer w-24 h-24 flex items-center justify-center z-[10000]
                 animate-pulse transition-transform duration-300 ease-in-out
                 ${isOpen ? "rotate-180" : "rotate-0"}
                 ${positionClasses[position] || positionClasses.bottom}`,
