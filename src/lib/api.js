@@ -1,4 +1,11 @@
-const API_BASE_URL = "https://api.example.com/"; // <-- change to your backend
+// Detect dev mode by hostname instead of process.env
+const isDev =
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1";
+
+const API_BASE_URL = isDev
+  ? "https://djangoandromedia-production.up.railway.app/"
+  : "https://your-api.com";
 
 /**
  * Simple fetch wrapper
@@ -22,7 +29,9 @@ export async function fetcher(url, options = {}) {
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(
-        `[Fetcher] Request failed ${res.status}: ${errorText || res.statusText}`
+        `[Fetcher] Request failed ${res.status}: ${
+          errorText || res.statusText
+        }`
       );
     }
 

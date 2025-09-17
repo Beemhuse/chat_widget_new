@@ -1,58 +1,41 @@
-// export function createElement(tag, props = {}, children = []) {
-//   const el = document.createElement(tag);
+// src/lib/dom.js
+export function createElement(tag, props = {}, children = []) {
+  const el = document.createElement(tag);
 
-//   Object.entries(props).forEach(([key, value]) => {
-//     if (key.startsWith("on") && typeof value === "function") {
-//       el.addEventListener(key.substring(2).toLowerCase(), value);
-//     } else if (key === "className") {
-//       el.className = value;
-//     } else {
-//       el.setAttribute(key, value);
-//     }
-//   });
-
-//   if (typeof children === "string") {
-//     el.textContent = children;
-//   } else {
-//     children.forEach((child) => {
-//       if (typeof child === "string") {
-//         el.appendChild(document.createTextNode(child));
-//       } else {
-//         el.appendChild(child);
-//       }
-//     });
-//   }
-
-//   return el;
-// }
-
-export function createElement(tag, props = {}, ...children) {
-  const el = typeof tag === "string" ? document.createElement(tag) : tag;
-
-  // Apply props if it's a fresh tag
-  if (typeof tag === "string") {
-    Object.entries(props || {}).forEach(([key, value]) => {
-      if (key.startsWith("on") && typeof value === "function") {
-        el.addEventListener(key.substring(2).toLowerCase(), value);
-      } else if (key === "className") {
-        el.className = value;
-      } else {
-        el.setAttribute(key, value);
-      }
-    });
+  // assign props
+  for (const [key, value] of Object.entries(props)) {
+    if (key === "className") {
+      el.className = value;
+    } else if (key.startsWith("on") && typeof value === "function") {
+      el.addEventListener(key.substring(2).toLowerCase(), value);
+    } else if (key === "style" && typeof value === "object") {
+      Object.assign(el.style, value);
+    } else {
+      el.setAttribute(key, value);
+    }
   }
 
-  // Flatten children into array
-  children = children.flat();
+  // normalize children
+  if (!Array.isArray(children)) children = [children];
 
-  children.forEach((child) => {
-    if (child == null) return;
+  for (const child of children) {
+    if (child == null || child === false) continue; // skip null/false
+
     if (typeof child === "string" || typeof child === "number") {
       el.appendChild(document.createTextNode(child));
-    } else if (child instanceof Node) {
+    } 
+    else if (child instanceof Node) {
       el.appendChild(child);
+    } 
+    else if (child && typeof child === "object" && child.__isElement && child.node instanceof Node) {
+      el.appendChild(child.node);
+    } 
+    else {
+      // 🚨 Instead of breaking, warn and skip
+      console.warn("⚠️ Unsupported child passed to createElement:", child);
     }
-  });
+  }
 
-  return el;
+  // return a wrapped element (so other helpers can detect it)
+  return Object.assign(el, { __isElement: true, node: el });
 }

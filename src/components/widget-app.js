@@ -10,11 +10,9 @@ export function WidgetApp({
 
   let businessData = null;
 
-  // we define rerender here first so store can call it
   const rerender = () => {
     container.innerHTML = ""; // clear previous render
 
-    // add floating button
     container.appendChild(
       WidgetButton({
         isOpen: store.isOpen,
@@ -29,8 +27,9 @@ export function WidgetApp({
       });
       wrapper.appendChild(
         WidgetComponent({
-          businessName: businessData?.name,
-          avatarUrl: businessData?.avatar_url,
+          businessName: businessData?.full_name,
+          avatarUrl: businessData?.avatar,
+          businessData
         })
       );
       container.appendChild(wrapper);

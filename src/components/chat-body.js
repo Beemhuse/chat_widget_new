@@ -1,20 +1,35 @@
 import { createElement } from "../lib/dom.js";
 
 export function ChatBody({ messages }) {
+  console.log(messages, "===>>> messages");
+
   const container = createElement("div", {
-    className: "chat-body flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50"
+    className:
+      "chat-body flex-1 overflow-y-auto p-4 space-y-3 bg-gray-100",
   });
 
-  messages.forEach(msg => {
-    const bubble = createElement("div", {
-      className: `p-2 rounded-lg max-w-xs ${
-        msg.sender === "user" 
-          ? "bg-blue-500 text-white self-end ml-auto" 
-          : "bg-gray-200 text-black"
-      }`
-    }, msg.text);
+  messages.forEach((msg) => {
+    const isVisitor = msg.sender === "visitor"; // ✅ make sure to use same property consistently
 
-    container.appendChild(bubble);
+    // Each message row (important for alignment)
+    const row = createElement("div", {
+      className: `w-full flex ${isVisitor ? "justify-end" : "justify-start"}`,
+    });
+
+    const bubble = createElement(
+      "div",
+      {
+        className: `px-3 py-2 rounded-2xl shadow-md text-sm leading-relaxed max-w-[75%] whitespace-pre-wrap ${
+          isVisitor
+            ? "bg-blue-500 text-white rounded-br-none" // visitor (right)
+            : "bg-green-100 text-black rounded-bl-none" // agent/bot (left)
+        }`,
+      },
+      msg.text || msg.content
+    );
+
+    row.appendChild(bubble);
+    container.appendChild(row);
   });
 
   return container;

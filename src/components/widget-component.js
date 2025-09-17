@@ -1,102 +1,138 @@
 import { createElement } from "../lib/dom.js";
-import { ChatHeader } from "./chat-header.js";
-import { ChatBody } from "./chat-body.js";
-import { ChatInput } from "./chat-input.js";
-import { ChatFooter } from "./chat-footer.js";
-import { VideoCall } from "./video-call.js";
-import { AudioCall } from "./audio-call.js";
+import { IntroScreen } from "../components/intro-screen.js";
+import { ChatHeader } from "../components/chat-header.js";
+import { ChatBody } from "../components/chat-body.js";
+import { ChatInput } from "../components/chat-input.js";
+import { ChatFooter } from "../components/chat-footer.js";
+import { VideoCall } from "../components/video-call.js";
+import { AudioCall } from "../components/audio-call.js";
+import useCommsStore from "../store/useCommsStore.js";
+import {
+  startChatSession,
+  handleSendMessage,
+  checkChatSession,
+} from "../services/chat-service.js";
+import { initWebSocket } from "../services/websocket-init.js";
 
-export function WidgetComponent({ businessName, avatarUrl }) {
+export function WidgetComponent({ businessName, avatarUrl, businessData }) {
   let messages = [
-    { sender: "bot", text: "Hello! How can I help you today?" },
+    { sender: "bot", content: "Hello! How can I help you today?" },
   ];
-
-  let view = "intro"; // "intro" | "chat" | "video" | "audio"
+  let view = "intro";
+  let socketService = null;
+  let isLoading = false;
+  let sessionId = null;
 
   const container = createElement("div", {
-    className: "widget-component fixed bottom-20 right-5 w-80 h-[480px] flex flex-col bg-white rounded-xl shadow-lg overflow-hidden"
+    className:
+      "widget-component fixed bottom-20 right-5 w-80 h-[480px] flex flex-col bg-white rounded-xl shadow-lg overflow-hidden",
   });
+  /** 🔹 Handle starting a call (video/audio) */
 
-  const handleSendMessage = (text) => {
-    messages.push({ sender: "user", text });
-    rerender();
+ const rerender = () => {
+  const { handleStartCall } = useCommsStore;
 
-    setTimeout(() => {
-      messages.push({ sender: "bot", text: "Thanks for your message! 👌" });
+  container.innerHTML = "";
+
+  // ✅ Header must return a DOM node
+  const header = ChatHeader({
+    businessName,
+    avatarUrl,
+    onBack: () => {
+      view = "chat";
       rerender();
-    }, 800);
-  };
+    },
+    onVideo: async () => {
+      view = "video";
+      await handleStartCall(businessData);
+      rerender();
+    },
+    onAudio: () => {
+      view = "audio";
+      rerender();
+    },
+    showBack: view !== "chat" && view !== "intro",
+  });
+  if (header) container.appendChild(header);
 
-  const rerender = () => {
-    container.innerHTML = "";
+  let body = null;
 
-    container.appendChild(ChatHeader({
+  if (view === "intro") {
+    body = IntroScreen({
+      isLoading,
+      onStart: async () => {
+        const visitorId = localStorage.getItem("guest_id") || crypto.randomUUID();
+        localStorage.setItem("guest_id", visitorId);
+
+        const response = await startChatSession(
+          visitorId,
+          businessData?.data?.id,
+          rerender
+        );
+
+        if (response) {
+          sessionId = response?.data?.id;
+
+          const history = await checkChatSession(sessionId);
+          if (history.length > 0) {
+            messages.length = 0;
+            messages.push(
+              ...history.map((msg) => ({
+                sender: msg.from_agent ? "agent" : "visitor",
+                content: msg.content || "",
+              }))
+            );
+          }
+
+          socketService = initWebSocket(
+            sessionId,
+            visitorId,
+            messages,
+            rerender
+          );
+
+          view = "chat";
+          rerender();
+        }
+      },
+    });
+  } else if (view === "chat") {
+    body = ChatBody({ messages });
+  } else if (view === "video") {
+    body = VideoCall({
       businessName,
       avatarUrl,
-      onBack: () => {
+      onStart: () => handleStartCall(businessData),
+      onEnd: () => {
         view = "chat";
         rerender();
       },
-      onVideo: () => {
-        view = "video";
+    });
+  } else if (view === "audio") {
+    body = AudioCall({
+      businessName,
+      avatarUrl,
+      onEnd: () => {
+        view = "chat";
         rerender();
       },
-      onAudio: () => {
-        view = "audio";
-        rerender();
-      },
-      showBack: view !== "chat" && view !== "intro"
-    }));
+    });
+  }
 
-    let body;
-    if (view === "intro") {
-      body = createElement("div", {
-        className: "flex flex-col items-center justify-center flex-1 p-6 text-center bg-gray-50"
-      }, [
-        createElement("img", {
-          src: "https://res.cloudinary.com/dzvyfd7is/image/upload/v1757512891/logo_ma0hyg.svg",
-          alt: "Nanocodes Logo",
-          className: "w-20 h-auto mb-4"
-        }),
-        createElement("p", { className: "text-sm text-gray-600 mb-6" }, "Ask us anything – we’ll get back to you here or by email."),
-        createElement("button", {
-          className: "bg-[#4789F2] text-white px-4 py-2 rounded-lg",
-          onClick: () => {
-            view = "chat";
-            rerender();
-          }
-        }, "Start Chat")
-      ]);
-    } else if (view === "chat") {
-      body = ChatBody({ messages });
-    } else if (view === "video") {
-      body = VideoCall({
-        businessName,
-        avatarUrl,
-        onEnd: () => {
-          view = "chat";
-          rerender();
-        }
-      });
-    } else if (view === "audio") {
-      body = AudioCall({
-        businessName,
-        avatarUrl,
-        onEnd: () => {
-          view = "chat";
-          rerender();
-        }
-      });
-    }
+  if (body) container.appendChild(body);
 
-    container.appendChild(body);
+  if (view === "chat") {
+    const input = ChatInput({
+      onSend: (data) =>
+        handleSendMessage(data, messages, socketService, rerender),
+    });
+    if (input) container.appendChild(input);
+  }
 
-    if (view === "chat") {
-      container.appendChild(ChatInput({ onSend: handleSendMessage }));
-    }
+  const footer = ChatFooter();
+  if (footer) container.appendChild(footer);
+};
 
-    container.appendChild(ChatFooter());
-  };
 
   rerender();
   return container;
