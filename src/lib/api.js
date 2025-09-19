@@ -4,7 +4,7 @@ const isDev =
   window.location.hostname === "127.0.0.1";
 
 const API_BASE_URL = isDev
-  ? "https://djangoandromedia-production.up.railway.app/"
+  ? "https://apiv2.andromedia.cc/"
   : "https://your-api.com";
 
 /**

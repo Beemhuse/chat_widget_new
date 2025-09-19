@@ -23,8 +23,10 @@ export function WidgetApp({
   widgetId = "d6518226-275f-40de-a98e-92571004892b",
 }) {
   const container = createElement("div", { className: "widget-app" });
+             const guest_id = localStorage.getItem("guest_id") || crypto.randomUUID();
 
   let businessData = null;
+  let ws = null; // websocket instance
 
   const getPayload = () => {
     return businessData?.data ?? businessData ?? null;
@@ -83,6 +85,7 @@ export function WidgetApp({
           avatarUrl: payload.avatar ?? "",
           logo: payload.logo ?? "",
           businessData: payload,
+          ws, // pass websocket to component if needed
         })
       );
       container.appendChild(wrapper);
@@ -98,12 +101,46 @@ export function WidgetApp({
     },
   };
 
+  // init websocket connection
+  const initWebSocket = () => {
+    ws = new WebSocket(`wss://apiv2.andromedia.cc/ws/signaling/?guest_id=${guest_id}&business_id=${businessData?.data?.id}`);
+
+    ws.onopen = () => {
+      console.log("[WebSocket] Connected");
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log("[WebSocket] Message received:", data);
+
+      // handle signaling messages (offer/answer/candidate etc.)
+      if (data.type === "offer") {
+        // TODO: handle offer
+      } else if (data.type === "answer") {
+        // TODO: handle answer
+      } else if (data.type === "candidate") {
+        // TODO: handle candidate
+      }
+    };
+
+    ws.onclose = () => {
+      console.warn("[WebSocket] Connection closed. Retrying in 3s...");
+      setTimeout(initWebSocket, 3000); // auto-reconnect
+    };
+
+    ws.onerror = (err) => {
+      console.error("[WebSocket] Error:", err);
+      ws.close();
+    };
+  };
+
   // fetch business data
   if (widgetId) {
     fetcher(`business/public-business/${widgetId}/`)
       .then((data) => {
         businessData = data;
         rerender();
+        initWebSocket(); // start socket after fetching
       })
       .catch((err) => {
         console.error("[WidgetApp] Failed to fetch business data:", err);
